@@ -30,6 +30,25 @@ anything that matters.
 
 Node 22 or newer and pnpm 10.
 
+## Versions
+
+The exact versions installed by the lockfile:
+
+| Package | Version |
+| --- | --- |
+| Node | 22 or newer (`engines`); built and tested on 24.15.0 |
+| TypeScript | 5.9.3 |
+| `@modelcontextprotocol/sdk` | 1.32.1 |
+| Zod | 4.6.5 |
+| Vitest | 5.0.3 |
+| ESLint | 10.12.0 |
+| typescript-eslint | 8.71.1 |
+
+These are kept in step with the hosted kit described under
+[When you outgrow this](#when-you-outgrow-this): the same package versions and
+the same current, non-deprecated APIs (`McpServer.registerTool`, Zod 4). Only
+the features differ, so a tool written for one moves to the other unchanged.
+
 ## Quick start (5 minutes)
 
 ```bash
@@ -153,6 +172,171 @@ If a setting is wrong the server refuses to start and says which variable to
 fix, on stderr. It never prints the key. To try the key path with the example,
 start the API with `EXAMPLE_API_KEY=some-key pnpm example:api` and give the
 server `API_KEY=some-key`.
+
+## Manual testing
+
+A checklist to confirm by hand that the template works. Run every command
+from the repository root. Steps 1 to 7 were run by the authors exactly as
+written, on macOS with Node 24.15.0. Steps 8 to 11 drive a real MCP client;
+their commands and configuration come from the clients' documentation and the
+tool results come from the test suite, but they are marked **not exercised by
+the authors** because nobody has yet clicked through them in the clients
+themselves.
+
+### In a terminal
+
+1. **Install and build.**
+
+   ```bash
+   pnpm install
+   pnpm build
+   ```
+
+   You should see no errors, and a `dist/index.js` file.
+
+2. **Run the checks.**
+
+   ```bash
+   pnpm type-check && pnpm lint && pnpm test
+   ```
+
+   You should see no output from the first two and `Tests  101 passed (101)`
+   from the third.
+
+3. **Start the example API** in a terminal of its own, and leave it running.
+
+   ```bash
+   pnpm example:api
+   ```
+
+   You should see:
+
+   ```
+   Example notes API listening on http://127.0.0.1:4010
+   No API key required.
+   ```
+
+4. **Run the server over stdio**, in a second terminal.
+
+   ```bash
+   pnpm smoke
+   ```
+
+   You should see one JSON log line (`"message":"server_started"`, from the
+   server's stderr), then:
+
+   ```
+   initialize: mcp-server-template 0.1.0, protocol 2025-11-25
+   tools/list: list_notes, search_notes, read_note, create_note, delete_note
+   tools/call list_notes: ok
+   Showing 3 of 3 notes:
+   ...
+   stdout: 3 lines, all JSON-RPC messages
+   Smoke test passed.
+   ```
+
+5. **Failure: missing `API_BASE_URL`.**
+
+   ```bash
+   node dist/index.js
+   ```
+
+   The server should exit at once with status 1 and print:
+
+   ```
+   Invalid configuration:
+   - API_BASE_URL is required: set it to the base URL of your API, for example https://api.example.com/v1
+   ```
+
+   If your shell already has `API_BASE_URL` set, run
+   `env -u API_BASE_URL node dist/index.js` instead.
+
+6. **Failure: wrong `API_KEY`.** Stop the example API (Ctrl+C) and start it
+   again so that it requires a key:
+
+   ```bash
+   EXAMPLE_API_KEY=some-key pnpm example:api
+   ```
+
+   It should now print `Requires: Authorization: Bearer <EXAMPLE_API_KEY>`.
+   In the second terminal:
+
+   ```bash
+   API_KEY=wrong-key pnpm smoke
+   ```
+
+   You should see `initialize` and `tools/list` succeed, then a log line with
+   `"errorCode":"API_STATUS_401"`, then:
+
+   ```
+   tools/call list_notes: ERROR
+   The API did not accept this server's credentials. Calling again will not help: tell the person to check the API_KEY setting of this server.
+   Smoke test failed: list_notes returned an error result
+   ```
+
+   `wrong-key` should appear nowhere in the output. Then confirm the right key
+   works: `API_KEY=some-key pnpm smoke` should end with `Smoke test passed.`
+
+7. **Failure: an unknown argument.** With the API from step 6 still running,
+   send the server a call with an argument `read_note` does not have:
+
+   ```bash
+   printf '%s\n' \
+     '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"manual","version":"0"}}}' \
+     '{"jsonrpc":"2.0","method":"notifications/initialized"}' \
+     '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"read_note","arguments":{"note_id":"note_welcome","verbose":true}}}' \
+     | API_BASE_URL=http://127.0.0.1:4010 API_KEY=some-key node dist/index.js 2>/dev/null | tail -1
+   ```
+
+   You should see one line of JSON with `"isError":true` and the text
+   `Unknown argument "verbose". This tool accepts: note_id, offset.`
+
+   Afterwards stop the example API and start it again without a key
+   (`pnpm example:api`) for the steps below.
+
+### In an MCP client
+
+8. **Add the server.** *Not exercised by the authors.* Use the configuration
+   under [Connect a client](#connect-a-client), with the absolute path to
+   `dist/index.js` on your machine.
+
+   - Claude Code: run the `claude mcp add` command, then `claude mcp get notes`.
+     It should show the server as connected. Inside a session, `/mcp` should
+     list `notes`.
+   - Claude Desktop: add the `mcpServers` entry, save, quit the application
+     completely and start it again. `notes` should appear among its
+     connectors with five tools.
+
+9. **Use every tool.** *Not exercised by the authors.* Ask the assistant, one
+   request at a time, and approve each tool call when the client asks:
+
+   | Ask | Tool it should call | What you should get back |
+   | --- | --- | --- |
+   | "List my notes." | `list_notes` | Three notes: Shopping list, Release plan, Welcome. |
+   | "Search my notes for Friday." | `search_notes` | One match, Release plan, with an excerpt. |
+   | "Read the release plan note." | `read_note` | "Freeze on Tuesday. Test on Wednesday. Release on Thursday morning, never on a Friday." |
+   | "Create a note titled Travel that says: passport and tickets." | `create_note` | Confirmation with a new `note_id`. |
+   | "List my notes." | `list_notes` | Four notes, Travel first. |
+   | "Delete the Travel note." | `delete_note` | Confirmation; listing again shows three notes. |
+
+   The example API keeps notes in memory, so restarting it brings back the
+   original three.
+
+10. **See a failure in the client.** *Not exercised by the authors.* Stop the
+    example API and ask the assistant to list your notes. The tool call
+    should fail with a message that the API could not be reached and that
+    `API_BASE_URL` should be checked. The detail is in the server's log:
+    for Claude Desktop, `mcp-server-notes.log` in the log folder named under
+    [Claude Desktop](#claude-desktop).
+
+11. **Remove the server.** *Not exercised by the authors.*
+
+    - Claude Code: `claude mcp remove notes`. Afterwards `claude mcp list`
+      should no longer show it.
+    - Claude Desktop: delete the `notes` entry from `mcpServers` in
+      `claude_desktop_config.json`, save, quit completely and start again.
+
+    Then stop the example API with Ctrl+C.
 
 ## Point it at your own API
 
