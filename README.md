@@ -200,8 +200,8 @@ themselves.
    pnpm type-check && pnpm lint && pnpm test
    ```
 
-   You should see no output from the first two and `Tests  101 passed (101)`
-   from the third.
+   You should see no output from the first two, and a Vitest summary from the
+   third with every test passed and none failed.
 
 3. **Start the example API** in a terminal of its own, and leave it running.
 
@@ -296,18 +296,18 @@ themselves.
 
 ### In an MCP client
 
-8. **Add the server.** *Not exercised by the authors.* Use the configuration
+8. **Add the server.** *Exercised in Claude Code (run headless with `claude -p`). The Claude Desktop path is not exercised by the authors.* Use the configuration
    under [Connect a client](#connect-a-client), with the absolute path to
    `dist/index.js` on your machine.
 
    - Claude Code: run the `claude mcp add` command, then `claude mcp get notes`.
-     It should show the server as connected. Inside a session, `/mcp` should
-     list `notes`.
+     It should show `Status: ✔ Connected`. Inside a session, `/mcp` should
+     list `notes` (the `/mcp` view is not exercised by the authors).
    - Claude Desktop: add the `mcpServers` entry, save, quit the application
      completely and start it again. `notes` should appear among its
      connectors with five tools.
 
-9. **Use every tool.** *Not exercised by the authors.* Ask the assistant, one
+9. **Use every tool.** *Exercised in Claude Code (run headless with `claude -p`). The Claude Desktop path is not exercised by the authors.* Ask the assistant, one
    request at a time, and approve each tool call when the client asks:
 
    | Ask | Tool it should call | What you should get back |
@@ -322,16 +322,16 @@ themselves.
    The example API keeps notes in memory, so restarting it brings back the
    original three.
 
-10. **See a failure in the client.** *Not exercised by the authors.* Stop the
+10. **See a failure in the client.** *Exercised in Claude Code (run headless with `claude -p`). The Claude Desktop path is not exercised by the authors.* Stop the
     example API and ask the assistant to list your notes. The tool call
     should fail with a message that the API could not be reached and that
     `API_BASE_URL` should be checked. The detail is in the server's log:
     for Claude Desktop, `mcp-server-notes.log` in the log folder named under
     [Claude Desktop](#claude-desktop).
 
-11. **Remove the server.** *Not exercised by the authors.*
+11. **Remove the server.** *Exercised in Claude Code (run headless with `claude -p`). The Claude Desktop path is not exercised by the authors.*
 
-    - Claude Code: `claude mcp remove notes`. Afterwards `claude mcp list`
+    - Claude Code: `claude mcp remove notes -s local`. Afterwards `claude mcp list`
       should no longer show it.
     - Claude Desktop: delete the `notes` entry from `mcpServers` in
       `claude_desktop_config.json`, save, quit completely and start again.
