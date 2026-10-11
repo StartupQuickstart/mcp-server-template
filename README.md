@@ -28,7 +28,7 @@ anything that matters.
 
 ## Requirements
 
-Node 22 or newer and pnpm 10.
+Node 24 or newer and pnpm 10.
 
 ## Versions
 
@@ -36,8 +36,8 @@ The exact versions installed by the lockfile:
 
 | Package | Version |
 | --- | --- |
-| Node | 22 or newer (`engines`); built and tested on 24.15.0 |
-| TypeScript | 5.9.3 |
+| Node | 24 or newer (`engines`); built and tested on 24.15.0 |
+| TypeScript | 6.0.3 |
 | `@modelcontextprotocol/sdk` | 1.32.1 |
 | Zod | 4.6.5 |
 | Vitest | 5.0.3 |
@@ -48,6 +48,11 @@ These are kept in step with the hosted kit described under
 [When you outgrow this](#when-you-outgrow-this): the same package versions and
 the same current, non-deprecated APIs (`McpServer.registerTool`, Zod 4). Only
 the features differ, so a tool written for one moves to the other unchanged.
+
+TypeScript is on 6, not 7: `typescript-eslint` 8.71 accepts TypeScript below
+6.1 only. `tsconfig.json` sets every option whose default TypeScript 6 changed
+(`strict`, `module`, `target`, `rootDir`, `types`) and uses none of the
+options it deprecates.
 
 ## Quick start (5 minutes)
 
